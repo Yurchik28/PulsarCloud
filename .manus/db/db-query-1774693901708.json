@@ -1,0 +1,9 @@
+{
+  "query": "\n-- Rename per-minute columns to per-hour in cloudInstances\nALTER TABLE cloudInstances \n  CHANGE COLUMN pricePerMinute pricePerHour DECIMAL(10,4) NOT NULL DEFAULT 0;\n\n-- Rename per-minute columns to per-hour in gpuInstances\nALTER TABLE gpuInstances \n  CHANGE COLUMN pricePerMinute pricePerHour DECIMAL(10,4) NOT NULL DEFAULT 0;\n\n-- Rename per-minute columns to per-hour in billingRecords\nALTER TABLE billingRecords \n  CHANGE COLUMN minutesBilled hoursBilled DECIMAL(8,2) NOT NULL,\n  CHANGE COLUMN pricePerMinute pricePerHour DECIMAL(12,6) NOT NULL;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4L27dRkwghXX1w8.root --database 22wXCGMc8mxumLodHVo7W5 --execute \n-- Rename per-minute columns to per-hour in cloudInstances\nALTER TABLE cloudInstances \n  CHANGE COLUMN pricePerMinute pricePerHour DECIMAL(10,4) NOT NULL DEFAULT 0;\n\n-- Rename per-minute columns to per-hour in gpuInstances\nALTER TABLE gpuInstances \n  CHANGE COLUMN pricePerMinute pricePerHour DECIMAL(10,4) NOT NULL DEFAULT 0;\n\n-- Rename per-minute columns to per-hour in billingRecords\nALTER TABLE billingRecords \n  CHANGE COLUMN minutesBilled hoursBilled DECIMAL(8,2) NOT NULL,\n  CHANGE COLUMN pricePerMinute pricePerHour DECIMAL(12,6) NOT NULL;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1095
+}

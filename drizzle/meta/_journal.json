@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1774536823887,
+      "tag": "0000_petite_turbo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1774536960284,
+      "tag": "0001_natural_trauma",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1774556736226,
+      "tag": "0002_clammy_molly_hayes",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1774726391743,
+      "tag": "0003_rare_hammerhead",
+      "breakpoints": true
+    }
+  ]
+}

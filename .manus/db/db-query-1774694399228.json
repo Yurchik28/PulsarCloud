@@ -1,0 +1,58 @@
+{
+  "query": "SELECT id, slug, pricePerHour, pricePerMonth FROM cloudServers ORDER BY pricePerMonth ASC LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4L27dRkwghXX1w8.root --database 22wXCGMc8mxumLodHVo7W5 --execute SELECT id, slug, pricePerHour, pricePerMonth FROM cloudServers ORDER BY pricePerMonth ASC LIMIT 20",
+  "rows": [
+    {
+      "id": "1",
+      "slug": "start-s1",
+      "pricePerHour": "4.1700",
+      "pricePerMonth": "2800.00"
+    },
+    {
+      "id": "8",
+      "slug": "storage-hdd",
+      "pricePerHour": "5.9500",
+      "pricePerMonth": "4000.00"
+    },
+    {
+      "id": "2",
+      "slug": "start-s2",
+      "pricePerHour": "8.3300",
+      "pricePerMonth": "5600.00"
+    },
+    {
+      "id": "3",
+      "slug": "business-b1",
+      "pricePerHour": "20.8300",
+      "pricePerMonth": "14000.00"
+    },
+    {
+      "id": "4",
+      "slug": "business-b2",
+      "pricePerHour": "41.6700",
+      "pricePerMonth": "28000.00"
+    },
+    {
+      "id": "5",
+      "slug": "business-b3",
+      "pricePerHour": "83.3300",
+      "pricePerMonth": "56000.00"
+    },
+    {
+      "id": "6",
+      "slug": "enterprise-e1",
+      "pricePerHour": "148.8100",
+      "pricePerMonth": "100000.00"
+    },
+    {
+      "id": "7",
+      "slug": "enterprise-e2",
+      "pricePerHour": "297.6200",
+      "pricePerMonth": "200000.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tslug\tpricePerHour\tpricePerMonth\n1\tstart-s1\t4.1700\t2800.00\n8\tstorage-hdd\t5.9500\t4000.00\n2\tstart-s2\t8.3300\t5600.00\n3\tbusiness-b1\t20.8300\t14000.00\n4\tbusiness-b2\t41.6700\t28000.00\n5\tbusiness-b3\t83.3300\t56000.00\n6\tenterprise-e1\t148.8100\t100000.00\n7\tenterprise-e2\t297.6200\t200000.00\n",
+  "stderr": "",
+  "execution_time_ms": 426
+}

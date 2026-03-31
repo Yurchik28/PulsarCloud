@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE cloudServers SET pricePerHour = 6.19, pricePerMonth = 4158 WHERE slug = 'start-s1';\nUPDATE cloudServers SET pricePerHour = 8.78, pricePerMonth = 5896 WHERE slug = 'storage-hdd';\nUPDATE cloudServers SET pricePerHour = 12.35, pricePerMonth = 8294 WHERE slug = 'start-s2';\nUPDATE cloudServers SET pricePerHour = 30.80, pricePerMonth = 20680 WHERE slug = 'business-b1';\nUPDATE cloudServers SET pricePerHour = 61.61, pricePerMonth = 41370 WHERE slug = 'business-b2';\nUPDATE cloudServers SET pricePerHour = 123.21, pricePerMonth = 82720 WHERE slug = 'business-b3';\nUPDATE cloudServers SET pricePerHour = 220.24, pricePerMonth = 147840 WHERE slug = 'enterprise-e1';\nUPDATE cloudServers SET pricePerHour = 440.48, pricePerMonth = 295680 WHERE slug = 'enterprise-e2';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4L27dRkwghXX1w8.root --database 22wXCGMc8mxumLodHVo7W5 --execute UPDATE cloudServers SET pricePerHour = 6.19, pricePerMonth = 4158 WHERE slug = 'start-s1';\nUPDATE cloudServers SET pricePerHour = 8.78, pricePerMonth = 5896 WHERE slug = 'storage-hdd';\nUPDATE cloudServers SET pricePerHour = 12.35, pricePerMonth = 8294 WHERE slug = 'start-s2';\nUPDATE cloudServers SET pricePerHour = 30.80, pricePerMonth = 20680 WHERE slug = 'business-b1';\nUPDATE cloudServers SET pricePerHour = 61.61, pricePerMonth = 41370 WHERE slug = 'business-b2';\nUPDATE cloudServers SET pricePerHour = 123.21, pricePerMonth = 82720 WHERE slug = 'business-b3';\nUPDATE cloudServers SET pricePerHour = 220.24, pricePerMonth = 147840 WHERE slug = 'enterprise-e1';\nUPDATE cloudServers SET pricePerHour = 440.48, pricePerMonth = 295680 WHERE slug = 'enterprise-e2';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 760
+}

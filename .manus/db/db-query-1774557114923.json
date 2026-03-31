@@ -1,0 +1,18 @@
+{
+  "query": "\nSHOW COLUMNS FROM cloudServers LIKE 'pricePerMinute';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4L27dRkwghXX1w8.root --database 22wXCGMc8mxumLodHVo7W5 --execute \nSHOW COLUMNS FROM cloudServers LIKE 'pricePerMinute';\n",
+  "rows": [
+    {
+      "Field": "pricePerMinute",
+      "Type": "decimal(12,6)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\npricePerMinute\tdecimal(12,6)\tNO\t\t0\t\n",
+  "stderr": "",
+  "execution_time_ms": 361
+}

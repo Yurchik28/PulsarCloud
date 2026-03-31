@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE gpus SET pricePerHour = 33, pricePerMonth = 16500 WHERE slug = 'tesla-t4';\nUPDATE gpus SET pricePerHour = 99, pricePerMonth = 49500 WHERE slug = 'rtx-4090';\nUPDATE gpus SET pricePerHour = 149, pricePerMonth = 74250 WHERE slug = 'rtx-5090';\nUPDATE gpus SET pricePerHour = 165, pricePerMonth = 82500 WHERE slug = 'a100-40gb';\nUPDATE gpus SET pricePerHour = 220, pricePerMonth = 110000 WHERE slug = 'a100-80gb';\nUPDATE gpus SET pricePerHour = 385, pricePerMonth = 192500 WHERE slug = 'h100-80gb';\nUPDATE gpus SET pricePerHour = 550, pricePerMonth = 275000 WHERE slug = 'h200-141gb';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4L27dRkwghXX1w8.root --database 22wXCGMc8mxumLodHVo7W5 --execute UPDATE gpus SET pricePerHour = 33, pricePerMonth = 16500 WHERE slug = 'tesla-t4';\nUPDATE gpus SET pricePerHour = 99, pricePerMonth = 49500 WHERE slug = 'rtx-4090';\nUPDATE gpus SET pricePerHour = 149, pricePerMonth = 74250 WHERE slug = 'rtx-5090';\nUPDATE gpus SET pricePerHour = 165, pricePerMonth = 82500 WHERE slug = 'a100-40gb';\nUPDATE gpus SET pricePerHour = 220, pricePerMonth = 110000 WHERE slug = 'a100-80gb';\nUPDATE gpus SET pricePerHour = 385, pricePerMonth = 192500 WHERE slug = 'h100-80gb';\nUPDATE gpus SET pricePerHour = 550, pricePerMonth = 275000 WHERE slug = 'h200-141gb';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 687
+}

@@ -1,0 +1,118 @@
+{
+  "query": "SELECT 'Cloud Servers' as type, name, pricePerMinute, (pricePerMinute * 60 * 24 * 30) as monthlyPrice FROM cloudServers UNION ALL SELECT 'GPUs', name, pricePerMinute, (pricePerMinute * 60 * 24 * 30) as monthlyPrice FROM gpus ORDER BY type, monthlyPrice DESC",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4L27dRkwghXX1w8.root --database 22wXCGMc8mxumLodHVo7W5 --execute SELECT 'Cloud Servers' as type, name, pricePerMinute, (pricePerMinute * 60 * 24 * 30) as monthlyPrice FROM cloudServers UNION ALL SELECT 'GPUs', name, pricePerMinute, (pricePerMinute * 60 * 24 * 30) as monthlyPrice FROM gpus ORDER BY type, monthlyPrice DESC",
+  "rows": [
+    {
+      "type": "Cloud Servers",
+      "name": "Корпоративный E2",
+      "pricePerMinute": "4.960333",
+      "monthlyPrice": "214286.385600"
+    },
+    {
+      "type": "Cloud Servers",
+      "name": "Корпоративный E1",
+      "pricePerMinute": "2.480167",
+      "monthlyPrice": "107143.214400"
+    },
+    {
+      "type": "Cloud Servers",
+      "name": "Бизнес B3",
+      "pricePerMinute": "1.388833",
+      "monthlyPrice": "59997.585600"
+    },
+    {
+      "type": "Cloud Servers",
+      "name": "Бизнес B2",
+      "pricePerMinute": "0.694500",
+      "monthlyPrice": "30002.400000"
+    },
+    {
+      "type": "Cloud Servers",
+      "name": "Бизнес B1",
+      "pricePerMinute": "0.347167",
+      "monthlyPrice": "14997.614400"
+    },
+    {
+      "type": "Cloud Servers",
+      "name": "Старт S2",
+      "pricePerMinute": "0.138833",
+      "monthlyPrice": "5997.585600"
+    },
+    {
+      "type": "Cloud Servers",
+      "name": "Хранилище HDD",
+      "pricePerMinute": "0.099167",
+      "monthlyPrice": "4284.014400"
+    },
+    {
+      "type": "Cloud Servers",
+      "name": "Старт S1",
+      "pricePerMinute": "0.069500",
+      "monthlyPrice": "3002.400000"
+    },
+    {
+      "type": "GPUs",
+      "name": "NVIDIA H200 141GB",
+      "pricePerMinute": "8.333333",
+      "monthlyPrice": "359999.985600"
+    },
+    {
+      "type": "GPUs",
+      "name": "NVIDIA H100 80GB PCIe",
+      "pricePerMinute": "5.833333",
+      "monthlyPrice": "251999.985600"
+    },
+    {
+      "type": "GPUs",
+      "name": "NVIDIA A100 80GB PCIe",
+      "pricePerMinute": "3.333333",
+      "monthlyPrice": "143999.985600"
+    },
+    {
+      "type": "GPUs",
+      "name": "NVIDIA L40S 48GB",
+      "pricePerMinute": "2.500000",
+      "monthlyPrice": "108000.000000"
+    },
+    {
+      "type": "GPUs",
+      "name": "NVIDIA RTX 5090 32GB",
+      "pricePerMinute": "2.250000",
+      "monthlyPrice": "97200.000000"
+    },
+    {
+      "type": "GPUs",
+      "name": "NVIDIA RTX 4090 24GB",
+      "pricePerMinute": "1.416667",
+      "monthlyPrice": "61200.014400"
+    },
+    {
+      "type": "GPUs",
+      "name": "NVIDIA RTX A5000 24GB",
+      "pricePerMinute": "1.250000",
+      "monthlyPrice": "54000.000000"
+    },
+    {
+      "type": "GPUs",
+      "name": "NVIDIA RTX 3090 24GB",
+      "pricePerMinute": "1.083333",
+      "monthlyPrice": "46799.985600"
+    },
+    {
+      "type": "GPUs",
+      "name": "NVIDIA A10 24GB",
+      "pricePerMinute": "0.833333",
+      "monthlyPrice": "35999.985600"
+    },
+    {
+      "type": "GPUs",
+      "name": "NVIDIA Tesla T4 16GB",
+      "pricePerMinute": "0.500000",
+      "monthlyPrice": "21600.000000"
+    }
+  ],
+  "messages": [],
+  "stdout": "type\tname\tpricePerMinute\tmonthlyPrice\nCloud Servers\tКорпоративный E2\t4.960333\t214286.385600\nCloud Servers\tКорпоративный E1\t2.480167\t107143.214400\nCloud Servers\tБизнес B3\t1.388833\t59997.585600\nCloud Servers\tБизнес B2\t0.694500\t30002.400000\nCloud Servers\tБизнес B1\t0.347167\t14997.614400\nCloud Servers\tСтарт S2\t0.138833\t5997.585600\nCloud Servers\tХранилище HDD\t0.099167\t4284.014400\nCloud Servers\tСтарт S1\t0.069500\t3002.400000\nGPUs\tNVIDIA H200 141GB\t8.333333\t359999.985600\nGPUs\tNVIDIA H100 80GB PCIe\t5.833333\t251999.985600\nGPUs\tNVIDIA A100 80GB PCIe\t3.333333\t143999.985600\nGPUs\tNVIDIA L40S 48GB\t2.500000\t108000.000000\nGPUs\tNVIDIA RTX 5090 32GB\t2.250000\t97200.000000\nGPUs\tNVIDIA RTX 4090 24GB\t1.416667\t61200.014400\nGPUs\tNVIDIA RTX A5000 24GB\t1.250000\t54000.000000\nGPUs\tNVIDIA RTX 3090 24GB\t1.083333\t46799.985600\nGPUs\tNVIDIA A10 24GB\t0.833333\t35999.985600\nGPUs\tNVIDIA Tesla T4 16GB\t0.500000\t21600.000000\n",
+  "stderr": "",
+  "execution_time_ms": 508
+}

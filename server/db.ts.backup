@@ -1,0 +1,172 @@
+import mysql from "mysql2/promise";
+import { config } from "dotenv";
+config();
+
+const pool = mysql.createPool(process.env.DATABASE_URL!);
+
+// Функции для работы с базой данных
+
+export async function getAllCloudServers() {
+  const [rows] = await pool.execute("SELECT * FROM cloudServers WHERE isActive = 1");
+  return rows;
+}
+
+
+
+export async function filterCloudServers(filters: any) {
+  let query = "SELECT * FROM cloudServers WHERE isActive = 1";
+  const values: any[] = [];
+  if (filters.minCpu) { query += " AND cpu >= ?"; values.push(filters.minCpu); }
+  if (filters.maxCpu) { query += " AND cpu <= ?"; values.push(filters.maxCpu); }
+  if (filters.minRam) { query += " AND ram >= ?"; values.push(filters.minRam); }
+  if (filters.maxRam) { query += " AND ram <= ?"; values.push(filters.maxRam); }
+  if (filters.category) { query += " AND category = ?"; values.push(filters.category); }
+  if (filters.storageType) { query += " AND storageType = ?"; values.push(filters.storageType); }
+  const [rows] = await pool.execute(query, values);
+  return rows;
+}
+
+export async function getAllGPUs() {
+  const [rows] = await pool.execute("SELECT * FROM gpus WHERE isActive = 1");
+  return rows;
+}
+
+export async function getGPUById(id: number) {
+  const [rows] = await pool.execute("SELECT * FROM gpus WHERE id = ?", [id]);
+  return (rows as any[])[0];
+}
+
+export async function getGPUBySlug(slug: string) {
+  const [rows] = await pool.execute("SELECT * FROM gpus WHERE slug = ?", [slug]);
+  return (rows as any[])[0];
+}
+
+export async function filterGPUs(filters: any) {
+  let query = "SELECT * FROM gpus WHERE isActive = 1";
+  const values: any[] = [];
+  if (filters.minMemory) { query += " AND memory >= ?"; values.push(filters.minMemory); }
+  if (filters.maxMemory) { query += " AND memory <= ?"; values.push(filters.maxMemory); }
+  if (filters.category) { query += " AND category = ?"; values.push(filters.category); }
+  if (filters.model) { query += " AND model LIKE ?"; values.push(`%${filters.model}%`); }
+  const [rows] = await pool.execute(query, values);
+  return rows;
+}
+
+export async function getAllDatacenters() {
+  const [rows] = await pool.execute("SELECT * FROM datacenters");
+  return rows;
+}
+
+export async function getDatacenterByCode(code: string) {
+  const [rows] = await pool.execute("SELECT * FROM datacenters WHERE code = ?", [code]);
+  return (rows as any[])[0];
+}
+
+
+
+export async function getUserGPUInstances(userId: number) {
+  const [rows] = await pool.execute("SELECT * FROM gpuInstances WHERE userId = ?", [userId]);
+  return rows;
+}
+
+export async function getGPUInstanceById(id: number) {
+  const [rows] = await pool.execute("SELECT * FROM gpuInstances WHERE id = ?", [id]);
+  return (rows as any[])[0];
+}
+
+export async function getUserCloudOrders(userId: number) {
+  const [rows] = await pool.execute("SELECT * FROM cloudOrders WHERE userId = ?", [userId]);
+  return rows;
+}
+
+export async function getCloudOrderById(id: number) {
+  const [rows] = await pool.execute("SELECT * FROM cloudOrders WHERE id = ?", [id]);
+  return (rows as any[])[0];
+}
+
+export async function getUserGPUOrders(userId: number) {
+  const [rows] = await pool.execute("SELECT * FROM gpuOrders WHERE userId = ?", [userId]);
+  return rows;
+}
+
+export async function getGPUOrderById(id: number) {
+  const [rows] = await pool.execute("SELECT * FROM gpuOrders WHERE id = ?", [id]);
+  return (rows as any[])[0];
+}
+
+export async function getUserByEmail(email: string) {
+  const [rows] = await pool.execute(
+    "SELECT id, email, password_hash, role, accountBalance FROM users WHERE email = ?",
+    [email]
+  );
+  return (rows as any[])[0];
+}
+
+export async function getUserBillingHistory(userId: number, limit: number) {
+  const [rows] = await pool.execute(
+    "SELECT * FROM billing_records WHERE userId = ? ORDER BY createdAt DESC LIMIT ?",
+    [userId, limit]
+  );
+  return rows;
+}
+
+export async function getUserBillingStats(userId: number) {
+  const [rows] = await pool.execute(
+    "SELECT SUM(amount) as totalSpent, SUM(CASE WHEN MONTH(createdAt) = MONTH(NOW()) THEN amount ELSE 0 END) as thisMonth FROM billing_records WHERE userId = ?",
+    [userId]
+  );
+  return (rows as any[])[0] || { totalSpent: 0, thisMonth: 0 };
+}
+
+// Функции для аутентификации и OAuth
+export async function getUserByOpenId(openId: string) {
+  const [rows] = await pool.execute(
+    "SELECT id, openId, email, password_hash, role, name, accountBalance FROM users WHERE openId = ?",
+    [openId]
+  );
+  return (rows as any[])[0];
+}
+
+export async function getUserById(id: number) {
+  const [rows] = await pool.execute(
+    "SELECT id, openId, email, password_hash, role, name, accountBalance FROM users WHERE id = ?",
+    [id]
+  );
+  return (rows as any[])[0];
+}
+
+export async function upsertUser(userData: any) {
+  const existing = await getUserByOpenId(userData.openId);
+  if (existing) {
+    await pool.execute(
+      "UPDATE users SET name = ?, email = ?, loginMethod = ?, lastSignedIn = NOW() WHERE openId = ?",
+      [userData.name || null, userData.email || null, userData.loginMethod || null, userData.openId]
+    );
+    return getUserByOpenId(userData.openId);
+  } else {
+    const [result] = await pool.execute(
+      "INSERT INTO users (openId, name, email, loginMethod, role, accountBalance) VALUES (?, ?, ?, ?, 'user', 1000)",
+      [userData.openId, userData.name || null, userData.email || null, userData.loginMethod || null]
+    );
+    return getUserById((result as any).insertId);
+  }
+}
+
+// Экспорт pool и getDb
+export function getDb() {
+  return { pool, db };
+}
+
+export { pool };
+
+
+
+
+
+
+
+
+export async function getUserCloudInstances(userId: number) {
+  const [rows] = await pool.execute("SELECT * FROM cloudInstances WHERE userId = ?", [userId]);
+  return rows;
+}

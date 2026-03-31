@@ -1,0 +1,355 @@
+import { eq, and, gte, lte, desc, isNotNull, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
+import {
+  InsertUser, users,
+  cloudServers, gpus,
+  cloudInstances, gpuInstances,
+  InsertCloudInstance, InsertGPUInstance,
+  cloudOrders, gpuOrders,
+  billingRecords,
+  datacenters,
+} from "../drizzle/schema";
+import { ENV } from './_core/env';
+
+let _db: ReturnType<typeof drizzle> | null = null;
+
+export async function getDb() {
+  if (!_db && process.env.DATABASE_URL) {
+    try {
+      _db = drizzle(process.env.DATABASE_URL);
+    } catch (error) {
+      console.warn("[Database] Failed to connect:", error);
+      _db = null;
+    }
+  }
+  return _db;
+}
+
+// ─── USERS ───────────────────────────────────────────────────────────────────
+
+export async function upsertUser(user: InsertUser): Promise<void> {
+  if (!user.openId) throw new Error("User openId is required for upsert");
+
+  const db = await getDb();
+  if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
+
+  try {
+    const values: InsertUser = { openId: user.openId };
+    const updateSet: Record<string, unknown> = {};
+
+    const textFields = ["name", "email", "loginMethod"] as const;
+    type TextField = (typeof textFields)[number];
+
+    const assignNullable = (field: TextField) => {
+      const value = user[field];
+      if (value === undefined) return;
+      const normalized = value ?? null;
+      values[field] = normalized;
+      updateSet[field] = normalized;
+    };
+    textFields.forEach(assignNullable);
+
+    if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; updateSet.lastSignedIn = user.lastSignedIn; }
+    if (user.role !== undefined) { values.role = user.role; updateSet.role = user.role; }
+    else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; updateSet.role = 'admin'; }
+
+    if (!values.lastSignedIn) values.lastSignedIn = new Date();
+    if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
+
+    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  } catch (error) {
+    console.error("[Database] Failed to upsert user:", error);
+    throw error;
+  }
+}
+
+export async function getUserByOpenId(openId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// ─── CLOUD SERVERS ───────────────────────────────────────────────────────────
+
+export async function getAllCloudServers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cloudServers).where(eq(cloudServers.isActive, true));
+}
+
+export async function getCloudServerById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(cloudServers).where(eq(cloudServers.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getCloudServerBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(cloudServers).where(eq(cloudServers.slug, slug)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function filterCloudServers(filters: {
+  minCpu?: number; maxCpu?: number;
+  minRam?: number; maxRam?: number;
+  category?: string; storageType?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(cloudServers.isActive, true)];
+  if (filters.minCpu !== undefined) conditions.push(gte(cloudServers.cpu, filters.minCpu));
+  if (filters.maxCpu !== undefined) conditions.push(lte(cloudServers.cpu, filters.maxCpu));
+  if (filters.minRam !== undefined) conditions.push(gte(cloudServers.ram, filters.minRam));
+  if (filters.maxRam !== undefined) conditions.push(lte(cloudServers.ram, filters.maxRam));
+  if (filters.category) conditions.push(eq(cloudServers.category, filters.category as any));
+  if (filters.storageType) conditions.push(eq(cloudServers.storageType, filters.storageType as any));
+  return db.select().from(cloudServers).where(and(...conditions));
+}
+
+// ─── GPUs ─────────────────────────────────────────────────────────────────────
+
+export async function getAllGPUs() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(gpus).where(eq(gpus.isActive, true));
+}
+
+export async function getGPUById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gpus).where(eq(gpus.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getGPUBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gpus).where(eq(gpus.slug, slug)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function filterGPUs(filters: {
+  minMemory?: number; maxMemory?: number; category?: string; model?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(gpus.isActive, true)];
+  if (filters.minMemory !== undefined) conditions.push(gte(gpus.memory, filters.minMemory));
+  if (filters.maxMemory !== undefined) conditions.push(lte(gpus.memory, filters.maxMemory));
+  if (filters.category) conditions.push(eq(gpus.category, filters.category as any));
+  if (filters.model) conditions.push(eq(gpus.model, filters.model));
+  return db.select().from(gpus).where(and(...conditions));
+}
+
+// ─── CLOUD INSTANCES ─────────────────────────────────────────────────────────
+
+export async function getUserCloudInstances(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cloudInstances)
+    .where(and(eq(cloudInstances.userId, userId)))
+    .orderBy(desc(cloudInstances.createdAt));
+}
+
+export async function getCloudInstanceById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(cloudInstances).where(eq(cloudInstances.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createCloudInstance(data: InsertCloudInstance) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(cloudInstances).values(data);
+  return result;
+}
+
+export async function startCloudInstance(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const now = new Date();
+  await db.update(cloudInstances)
+    .set({ status: "running", startedAt: now, billingStartedAt: now, lastBilledAt: now, stoppedAt: null })
+    .where(and(eq(cloudInstances.id, id), eq(cloudInstances.userId, userId)));
+}
+
+export async function stopCloudInstance(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const now = new Date();
+  await db.update(cloudInstances)
+    .set({ status: "stopped", stoppedAt: now, billingStartedAt: null })
+    .where(and(eq(cloudInstances.id, id), eq(cloudInstances.userId, userId)));
+}
+
+export async function terminateCloudInstance(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const now = new Date();
+  await db.update(cloudInstances)
+    .set({ status: "terminated", terminatedAt: now, billingStartedAt: null })
+    .where(and(eq(cloudInstances.id, id), eq(cloudInstances.userId, userId)));
+}
+
+// ─── GPU INSTANCES ────────────────────────────────────────────────────────────
+
+export async function getUserGPUInstances(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(gpuInstances)
+    .where(eq(gpuInstances.userId, userId))
+    .orderBy(desc(gpuInstances.createdAt));
+}
+
+export async function getGPUInstanceById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gpuInstances).where(eq(gpuInstances.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createGPUInstance(data: InsertGPUInstance) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(gpuInstances).values(data);
+}
+
+export async function startGPUInstance(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const now = new Date();
+  await db.update(gpuInstances)
+    .set({ status: "running", startedAt: now, billingStartedAt: now, lastBilledAt: now, stoppedAt: null })
+    .where(and(eq(gpuInstances.id, id), eq(gpuInstances.userId, userId)));
+}
+
+export async function stopGPUInstance(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const now = new Date();
+  await db.update(gpuInstances)
+    .set({ status: "stopped", stoppedAt: now, billingStartedAt: null })
+    .where(and(eq(gpuInstances.id, id), eq(gpuInstances.userId, userId)));
+}
+
+export async function terminateGPUInstance(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const now = new Date();
+  await db.update(gpuInstances)
+    .set({ status: "terminated", terminatedAt: now, billingStartedAt: null })
+    .where(and(eq(gpuInstances.id, id), eq(gpuInstances.userId, userId)));
+}
+
+// ─── BILLING RECORDS ─────────────────────────────────────────────────────────
+
+export async function getUserBillingRecords(userId: number, limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(billingRecords)
+    .where(eq(billingRecords.userId, userId))
+    .orderBy(desc(billingRecords.createdAt))
+    .limit(limit);
+}
+
+export async function getBillingRecordsByInstance(
+  instanceType: "cloud" | "gpu",
+  instanceId: number,
+  limit = 50
+) {
+  const db = await getDb();
+  if (!db) return [];
+  const condition = instanceType === "cloud"
+    ? eq(billingRecords.cloudInstanceId, instanceId)
+    : eq(billingRecords.gpuInstanceId, instanceId);
+  return db.select().from(billingRecords)
+    .where(condition)
+    .orderBy(desc(billingRecords.createdAt))
+    .limit(limit);
+}
+
+export async function getUserBillingStats(userId: number) {
+  const db = await getDb();
+  if (!db) return { totalSpent: 0, thisMonth: 0, recordCount: 0 };
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [allRecords, monthRecords] = await Promise.all([
+    db.select().from(billingRecords).where(eq(billingRecords.userId, userId)),
+    db.select().from(billingRecords).where(
+      and(eq(billingRecords.userId, userId), gte(billingRecords.createdAt, monthStart))
+    ),
+  ]);
+
+  const totalSpent = allRecords.reduce((sum, r) => sum + Number(r.amount), 0);
+  const thisMonth = monthRecords.reduce((sum, r) => sum + Number(r.amount), 0);
+
+  return {
+    totalSpent: Math.round(totalSpent * 100) / 100,
+    thisMonth: Math.round(thisMonth * 100) / 100,
+    recordCount: allRecords.length,
+  };
+}
+
+// ─── ORDERS ───────────────────────────────────────────────────────────────────
+
+export async function getUserCloudOrders(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cloudOrders).where(eq(cloudOrders.userId, userId)).orderBy(desc(cloudOrders.createdAt));
+}
+
+export async function getUserGPUOrders(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(gpuOrders).where(eq(gpuOrders.userId, userId)).orderBy(desc(gpuOrders.createdAt));
+}
+
+export async function getCloudOrderById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(cloudOrders).where(eq(cloudOrders.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getGPUOrderById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gpuOrders).where(eq(gpuOrders.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// ─── DATACENTERS ──────────────────────────────────────────────────────────────
+
+export async function getAllDatacenters() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(datacenters).where(eq(datacenters.isActive, true));
+}
+
+export async function getDatacenterByCode(code: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(datacenters).where(eq(datacenters.code, code)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByEmail(email: string) {
+  const [rows] = await pool.execute(
+    "SELECT id, email, password_hash, role, accountBalance FROM users WHERE email = ?",
+    [email]
+  );
+  return (rows as any[])[0];
+}

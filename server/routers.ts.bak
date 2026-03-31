@@ -1,0 +1,218 @@
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { COOKIE_NAME } from "@shared/const";
+import { getSessionCookieOptions } from "./_core/cookies";
+import { systemRouter } from "./_core/systemRouter";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import * as db from "./db";
+import bcrypt from "bcryptjs";
+
+export const appRouter = router({
+  system: systemRouter,
+  auth: router({
+    login: publicProcedure
+      .input(z.object({ email: z.string().email(), password: z.string().min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        const user = await db.getUserByEmail(input.email);
+        if (!user) throw new Error("User not found");
+        const isValid = await bcrypt.compare(input.password, user.password_hash);
+        if (!isValid) throw new Error("Invalid password");
+        const token = Buffer.from(JSON.stringify({ id: user.id, role: user.role })).toString("base64");
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, httpOnly: true, maxAge: 86400000 });
+        return { success: true, user: { id: user.id, email: user.email, role: user.role, balance: user.accountBalance } };
+      }),
+    register: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(8),
+        name: z.string().optional(),
+        company: z.string().optional(),
+        phone: z.string().optional()
+      }))
+      .mutation(async ({ input }) => {
+        const existingUser = await db.getUserByEmail(input.email);
+        if (existingUser) throw new Error("User already exists");
+        const password_hash = bcrypt.hashSync(input.password, 10);
+        const openId = `user_${Date.now()}`;
+        await db.pool.execute(
+          "INSERT INTO users (openId, email, password_hash, name, company, phone, role, accountBalance) VALUES (?, ?, ?, ?, ?, ?, 'user', 1000)",
+          [openId, input.email, password_hash, input.name || null, input.company || null, input.phone || null]
+        );
+        return { success: true };
+      }),
+    me: publicProcedure.query(async ({ ctx }) => ctx.user),
+    logout: publicProcedure.mutation(({ ctx }) => {
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      return { success: true };
+    }),
+  }),
+  // ─── CLOUD SERVERS ───
+  cloudServers: router({
+    list: publicProcedure.query(async () => db.getAllCloudServers()),
+    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => db.getCloudServerById(input.id)),
+    getBySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => db.getCloudServerBySlug(input.slug)),
+    filter: publicProcedure.input(z.object({
+      minCpu: z.number().optional(), maxCpu: z.number().optional(),
+      minRam: z.number().optional(), maxRam: z.number().optional(),
+      category: z.string().optional(), storageType: z.string().optional(),
+    })).query(async ({ input }) => db.filterCloudServers(input)),
+  }),
+  // ─── GPUs ───
+  gpus: router({
+    list: publicProcedure.query(async () => db.getAllGPUs()),
+    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => db.getGPUById(input.id)),
+    getBySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => db.getGPUBySlug(input.slug)),
+    filter: publicProcedure.input(z.object({
+      minMemory: z.number().optional(), maxMemory: z.number().optional(),
+      category: z.string().optional(), model: z.string().optional(),
+    })).query(async ({ input }) => db.filterGPUs(input)),
+  }),
+  // ─── DATACENTERS ───
+  datacenters: router({
+    list: publicProcedure.query(async () => db.getAllDatacenters()),
+    getByCode: publicProcedure.input(z.object({ code: z.string() })).query(async ({ input }) => db.getDatacenterByCode(input.code)),
+  }),
+  // ─── CLOUD INSTANCES ───
+  cloudInstances: router({
+    terminate: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const instance = await db.getCloudInstanceById(input.id);
+        if (!instance || instance.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        await db.pool.execute("DELETE FROM cloudInstances WHERE id = ?", [input.id]);
+        return { success: true };
+      }),
+    stop: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const instance = await db.getCloudInstanceById(input.id);
+        if (!instance || instance.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        if (instance.status !== "running") throw new TRPCError({ code: "BAD_REQUEST", message: "Инстанс не запущен" });
+        await db.pool.execute("UPDATE cloudInstances SET status = \stopped, billingStartedAt = NULL WHERE id = ?", [input.id]);
+        return { success: true };
+      }),
+    start: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const instance = await db.getCloudInstanceById(input.id);
+        if (!instance || instance.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        if (instance.status === "running") throw new TRPCError({ code: "BAD_REQUEST", message: "Инстанс уже запущен" });
+        await db.pool.execute("UPDATE cloudInstances SET status = \running, billingStartedAt = NOW() WHERE id = ?", [input.id]);
+        return { success: true };
+      }),
+    deploy: protectedProcedure
+      .input(z.object({ serverId: z.number(), name: z.string(), region: z.string(), os: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const server = await db.getCloudServerById(input.serverId);
+        if (!server) throw new TRPCError({ code: "NOT_FOUND", message: "Сервер не найден" });
+        const now = new Date();
+        const [result] = await db.pool.execute(
+          "INSERT INTO cloudInstances (userId, serverId, name, hostname, status, region, os, pricePerMinute, totalBilled, monthlyCost, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [ctx.user.id, input.serverId, input.name, `${input.name.replace(/\s/g, "-").toLowerCase()}-${Date.now()}.kirovskdc.ru`, "provisioning", input.region, input.os, Number(server.pricePerHour) / 60, 0, now, now]
+        );
+        return { id: result.insertId, name: input.name, hostname: `${input.name.replace(/\s/g, "-").toLowerCase()}-${Date.now()}.kirovskdc.ru`, status: "provisioning" };
+      }),
+    list: protectedProcedure.query(async ({ ctx }) => db.getUserCloudInstances(ctx.user.id)),
+    getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
+      const inst = await db.getCloudInstanceById(input.id);
+      if (!inst || inst.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      return inst;
+    }),
+  }),
+  // ─── GPU INSTANCES ───
+  gpuInstances: router({
+    terminate: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const instance = await db.getGPUInstanceById(input.id);
+        if (!instance || instance.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        await db.pool.execute("DELETE FROM gpuInstances WHERE id = ?", [input.id]);
+        return { success: true };
+      }),
+    stop: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const instance = await db.getGPUInstanceById(input.id);
+        if (!instance || instance.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        if (instance.status !== "running") throw new TRPCError({ code: "BAD_REQUEST", message: "Инстанс не запущен" });
+        await db.pool.execute("UPDATE gpuInstances SET status = \stopped, billingStartedAt = NULL WHERE id = ?", [input.id]);
+        return { success: true };
+      }),
+    start: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const instance = await db.getGPUInstanceById(input.id);
+        if (!instance || instance.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        if (instance.status === "running") throw new TRPCError({ code: "BAD_REQUEST", message: "Инстанс уже запущен" });
+        await db.pool.execute("UPDATE gpuInstances SET status = \running, billingStartedAt = NOW() WHERE id = ?", [input.id]);
+        return { success: true };
+      }),
+    deploy: protectedProcedure
+      .input(z.object({ gpuId: z.number(), name: z.string(), region: z.string(), gpuCount: z.number().default(1) }))
+      .mutation(async ({ input, ctx }) => {
+        const gpu = await db.getGPUById(input.gpuId);
+        if (!gpu) throw new TRPCError({ code: "NOT_FOUND", message: "GPU не найден" });
+        const now = new Date();
+        const [result] = await db.pool.execute(
+          "INSERT INTO gpuInstances (userId, gpuId, name, hostname, status, region, gpuCount, pricePerMinute, totalBilled, monthlyCost, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [ctx.user.id, input.gpuId, input.name, `${input.name.replace(/\s/g, "-").toLowerCase()}-${Date.now()}.kirovskdc.ru`, "provisioning", input.region, input.gpuCount, Number(gpu.pricePerHour) / 60, 0, now, now]
+        );
+        return { id: result.insertId, name: input.name, hostname: `${input.name.replace(/\s/g, "-").toLowerCase()}-${Date.now()}.kirovskdc.ru`, status: "provisioning" };
+      }),
+    list: protectedProcedure.query(async ({ ctx }) => db.getUserGPUInstances(ctx.user.id)),
+    getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
+      const inst = await db.getGPUInstanceById(input.id);
+      if (!inst || inst.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      return inst;
+    }),
+  }),
+  // ─── CLOUD ORDERS ───
+  cloudOrders: router({
+    list: protectedProcedure.query(async ({ ctx }) => db.getUserCloudOrders(ctx.user.id)),
+    getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
+      const order = await db.getCloudOrderById(input.id);
+      if (!order || order.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      return order;
+    }),
+    create: protectedProcedure.input(z.object({
+      serverId: z.number(), quantity: z.number().default(1),
+      billingCycle: z.enum(["minutely", "hourly", "monthly"]).default("hourly"),
+      deploymentRegion: z.string(), osChoice: z.string(), totalPrice: z.number(),
+    })).mutation(async ({ input, ctx }) => {
+      const server = await db.getCloudServerById(input.serverId);
+      if (!server) throw new TRPCError({ code: "NOT_FOUND", message: "Сервер не найден" });
+      return { id: Date.now(), userId: ctx.user.id, ...input, status: "pending", createdAt: new Date() };
+    }),
+  }),
+  // ─── GPU ORDERS ───
+  gpuOrders: router({
+    list: protectedProcedure.query(async ({ ctx }) => db.getUserGPUOrders(ctx.user.id)),
+    getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
+      const order = await db.getGPUOrderById(input.id);
+      if (!order || order.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      return order;
+    }),
+    create: protectedProcedure.input(z.object({
+      gpuId: z.number(), quantity: z.number().default(1),
+      billingCycle: z.enum(["minutely", "hourly", "monthly"]).default("hourly"),
+      deploymentRegion: z.string(), cudaVersion: z.string().optional(), totalPrice: z.number(),
+    })).mutation(async ({ input, ctx }) => {
+      const gpu = await db.getGPUById(input.gpuId);
+      if (!gpu) throw new TRPCError({ code: "NOT_FOUND", message: "GPU не найден" });
+      return { id: Date.now(), userId: ctx.user.id, ...input, status: "pending", createdAt: new Date() };
+    }),
+  }),
+  // ─── BILLING ───
+  billing: router({
+    history: protectedProcedure.input(z.object({ limit: z.number().default(50) })).query(async ({ ctx, input }) => {
+      return db.getUserBillingHistory(ctx.user.id, input.limit);
+    }),
+    stats: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserBillingStats(ctx.user.id);
+    }),
+  }),
+});
+
+export type AppRouter = typeof appRouter;

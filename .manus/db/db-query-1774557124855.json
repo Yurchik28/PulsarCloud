@@ -1,0 +1,42 @@
+{
+  "query": "\nSHOW COLUMNS FROM cloudInstances WHERE Field IN ('pricePerMinute','totalBilled','billingStartedAt','lastBilledAt');\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4L27dRkwghXX1w8.root --database 22wXCGMc8mxumLodHVo7W5 --execute \nSHOW COLUMNS FROM cloudInstances WHERE Field IN ('pricePerMinute','totalBilled','billingStartedAt','lastBilledAt');\n",
+  "rows": [
+    {
+      "Field": "pricePerMinute",
+      "Type": "decimal(12,6)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "totalBilled",
+      "Type": "decimal(12,4)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "billingStartedAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "lastBilledAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\npricePerMinute\tdecimal(12,6)\tNO\t\t0\t\ntotalBilled\tdecimal(12,4)\tNO\t\t0\t\nbillingStartedAt\ttimestamp\tYES\t\tNULL\t\nlastBilledAt\ttimestamp\tYES\t\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 347
+}
